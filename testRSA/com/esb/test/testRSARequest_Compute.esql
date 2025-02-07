@@ -1,0 +1,43 @@
+BROKER SCHEMA com.esb.test
+
+
+CREATE COMPUTE MODULE testRSARequest_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+	 	
+	 	DECLARE eskey, skey, inReq, inputChar, verifySign CHARACTER;
+	 	--SET inputChar = CAST(ASBITSTREAM(InputRoot.JSON.Data.REQUEST CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding) AS CHARACTER CCSID 1208); 	
+	 	SET eskey = InputRoot.HTTPInputHeader.Accesstoken;
+	 	SET skey = RSADECRYPTSECRETKEY(eskey);	 	
+	 	SET inReq = RSADECRYPT(skey,InputRoot.JSON.Data.REQUEST);
+	 	SET OutputRoot.JSON.Data.skey = skey;
+	 	SET OutputRoot.JSON.Data.decReq = inReq;
+	 	SET verifySign = VERIFYSIGN(inReq, InputRoot.JSON.Data.DIGI_SIGN);
+		
+		IF (verifySign = 'true') THEN
+			SET OutputRoot.JSON.Data.signatureVerification = 'Successful';
+		ELSE
+			SET OutputRoot.JSON.Data.signatureVerification = 'Failure';
+		END IF; 
+			
+
+		RETURN TRUE;
+	END;
+
+END MODULE;
+
+
+CREATE PROCEDURE RSADECRYPTSECRETKEY(IN skey CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.RSAEncryptionExample.decryptSecretKey";
+
+CREATE PROCEDURE RSADECRYPT(IN secretKeyString CHARACTER, IN cipherText CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.BhavishyaCrypt.decrypt";
+
+CREATE PROCEDURE VERIFYSIGN(IN data CHARACTER, IN signature CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.BhavishyaCrypt.verifySignature";

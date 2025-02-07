@@ -1,0 +1,47 @@
+BROKER SCHEMA com.esb.test
+
+
+CREATE COMPUTE MODULE testRSAResponse_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		DECLARE estring, skey, Inputchar CHARACTER '';
+		DECLARE inputChar, reqRefNum CHARACTER;
+		SET reqRefNum = '121354jhgsfvhkjsfbv';
+		SET skey = 'OACHtFWEH9GXmFEwXYhNhu9yFgEl8dYet2zzbZJgzcY=';	
+		
+--		SET inputChar = CAST(ASBITSTREAM(InputRoot.HTTPInputHeader CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding) AS CHARACTER CCSID 1208); 
+--		SET skey = SKEYGEN();
+--		SET OutputRoot.JSON.Data.encryptedPlainTextPayload = AESENCRYPT(skey,inputChar);
+--		SET OutputRoot.JSON.Data.skey = skey;
+--		SET OutputRoot.JSON.Data.DIGI_SIGN = RSASIGN(inputChar);
+--		SET OutputRoot.HTTPReplyHeader."AccessToken" = RSAENCRYPTSECRETKEY(skey);
+		
+		DECLARE respTime CHARACTER CAST(CURRENT_TIMESTAMP AS CHARACTER FORMAT 'dd-MM-yyyy HH.mm:ss');
+		SET inputChar = CAST(ASBITSTREAM(InputRoot.JSON.Data CCSID InputRoot.Properties.CodedCharSetId ENCODING InputRoot.Properties.Encoding) AS CHARACTER CCSID 1208); 	
+		SET OutputRoot.JSON.Data.REQUEST_REFERENCE_NUMBER = reqRefNum;
+		SET OutputRoot.JSON.Data.RESPONSE = AESENCRYPT(skey,inputChar);
+		SET OutputRoot.JSON.Data.RESPONSE_DATE = respTime;
+		SET OutputRoot.JSON.Data.DIGI_SIGN = RSASIGN(inputChar);
+		
+		
+		RETURN TRUE;
+	END;
+END MODULE;
+
+
+CREATE PROCEDURE AESENCRYPT(IN secretKeyText CHARACTER, IN plaintextPayload CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.BhavishyaCrypt.encrypt";
+
+CREATE PROCEDURE RSASIGN(IN plaintextPayload CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.BhavishyaCrypt.signRequest";
+
+CREATE PROCEDURE RSAENCRYPTSECRETKEY(IN skey CHARACTER)
+RETURNS CHARACTER
+LANGUAGE JAVA 
+EXTERNAL NAME "com.esb.test.RSAEncryptionExample.encryptSecretKey";
+
